@@ -9,10 +9,11 @@ class ColorPicker:
         self.image = None
         self.color_image = None
         self.rgb_label = None
-        self.pick_size = 5
+        self.pick_size = 8
         self.pickers = []  # Lista de pickers, cada um com posição e cor própria
         self.dragging_picker = None
         self.picker_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]  # Cores dos pickers
+        self.offset = 0
 
     def load_image(self):
         try:
@@ -24,15 +25,23 @@ class ColorPicker:
             print(f"Ocorreu um erro: {e}")
 
     def create_picker(self, color):
-        picker = {'color': color, 'position': (0, 0)}
+        x = int(self.image.shape[1]/2)
+        y = int(self.image.shape[0]/2)
+        self.offset += 10
+        
+        picker = {'color': color, 'position': (x+ self.offset, y+self.offset)}
         self.pickers.append(picker)
 
     def draw_pickers(self):
         for picker in self.pickers:
             color = self.image[picker['position'][1], picker['position'][0]]
-            color_bgr = tuple(reversed(color))  # Convertendo RGB para BGR
-            # cv2.circle(self.image, picker['position'], self.pick_size, color_bgr, -1)
-            cv2.circle(self.image, picker['position'], self.pick_size, picker['color'], 2)
+            color_bgr = tuple(int(c) for c in color)
+            print(type(color[0]),type(color_bgr[0]), '-', type(picker['color'][0]))
+            cv2.circle(self.image, picker['position'], self.pick_size, color_bgr, -1)
+            cv2.circle(self.image, picker['position'], self.pick_size+1, (255,255,255), 2)
+            cv2.circle(self.image, picker['position'], self.pick_size-1, (0,0,0), 2)
+            # cv2.circle(self.image, picker['position'], self.pick_size, picker['color'], 2)
+            
 
     def get_color(self, picker):
         x, y = picker['position']
