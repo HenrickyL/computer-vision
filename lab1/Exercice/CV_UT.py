@@ -58,7 +58,7 @@ class ColorPicker:
         x, y = picker['position']
         if 0 <= x < self.image.shape[1] and 0 <= y < self.image.shape[0]:
             color = self.image[y, x]
-            color_text = "RGB: {:03d}, {:03d}, {:03d}".format(color[0], color[1], color[2])
+            color_text = "RGB: ({:03d}, {:03d}, {:03d})".format(color[0], color[1], color[2])
             
             picker['color_image'] = Image.new('RGB', (15, 15), color=tuple(color))
             picker['rgb_label'].config(text=color_text )
@@ -111,7 +111,7 @@ class ColorPicker:
     def start(self):
         self.load_image()
         if self.image is not None:
-            root = Tk()
+            root = Tk(screenName='ColorPicker')
             self.frame = Frame(root, bd=5)
             self.frame.pack(side=BOTTOM)
 
