@@ -32,8 +32,16 @@ class ColorPicker:
             'color': color, 
             'position': (x, y),
             'color_image': None,
-            'rgb_label': None
+            'rgb_label': None,
+            'color_label': None,
+            'frame': None
         }
+        picker['rgb_label'] = Label(self.frame, text='')
+        picker['rgb_label'].pack(side=LEFT)
+        picker['frame'] = Frame(picker['rgb_label'])
+        picker['frame'].pack(fill=X, pady=2)
+        picker['color_label'] = Label(picker['frame'], image=None)
+        picker['color_label'].pack(side=LEFT)
         self.pickers.append(picker)
 
     def draw_pickers(self):
@@ -50,16 +58,17 @@ class ColorPicker:
         x, y = picker['position']
         if 0 <= x < self.image.shape[1] and 0 <= y < self.image.shape[0]:
             color = self.image[y, x]
-            color_image = Image.new('RGB', (30, 30), color=tuple(color))
             color_text = "RGB: {:03d}, {:03d}, {:03d}".format(color[0], color[1], color[2])
-            self.rgb_label.config(text=color_text )
-            self.update_color_label(color_image)
+            
+            picker['color_image'] = Image.new('RGB', (15, 15), color=tuple(color))
+            picker['rgb_label'].config(text=color_text )
+            self.update_color_label(picker)
             
 
-    def update_color_label(self, color_image):
-        color_image_tk = ImageTk.PhotoImage(image=color_image)
-        self.color_label.configure(image=color_image_tk)
-        self.color_label.image = color_image_tk
+    def update_color_label(self, picker):
+        color_image_tk = ImageTk.PhotoImage(image=picker['color_image'])
+        picker['color_label'].configure(image=color_image_tk)
+        picker['color_label'].image = color_image_tk
 
     def on_click(self, event):
         x, y = event.x, event.y
@@ -75,7 +84,8 @@ class ColorPicker:
     def on_motion(self, event):
         if self.dragging_picker:
             self.dragging_picker['position'] = (event.x, event.y)
-            self.get_color(self.dragging_picker)
+            for picker in self.pickers:
+                self.get_color(picker)
             self.update_image()
 
     def update_image(self):
@@ -89,14 +99,9 @@ class ColorPicker:
         self.label.configure(image=imgtk)
         self.label.image = imgtk
     
-    def create_picker_labels(self):
-        for picker in self.pickers:
-            picker_frame = Frame(self.rgb_label, bg='#%02x%02x%02x' % picker['color'])
-            picker_frame.pack(fill=X, pady=2)
-            color_text = f"RGB: {picker['color'][0]}, {picker['color'][1]}, {picker['color'][2]}"
-            color_label = Label(picker_frame, text=color_text)
-            color_label.pack(side=LEFT)
-            
+    def resize_image(self, width, height):
+        self.image = cv2.resize(self.image, (width, height), interpolation = cv2.INTER_AREA) 
+        
     def create_picker_callback(self, value):
         try:
             self.create_picker()
@@ -107,17 +112,17 @@ class ColorPicker:
         self.load_image()
         if self.image is not None:
             root = Tk()
-            frame = Frame(root, bd=5)
-            frame.pack(side=LEFT)
+            self.frame = Frame(root, bd=5)
+            self.frame.pack(side=BOTTOM)
 
-            self.label = Label(frame, image=None)
-            self.label.pack(side=LEFT)
+            self.label = Label(self.frame, image=None)
+            self.label.pack(side=BOTTOM)
 
-            self.color_label = Label(frame, image=None)
-            self.color_label.pack(side=LEFT)
+            # self.color_label = Label(frame, image=None)
+            # self.color_label.pack(side=LEFT)
 
-            self.rgb_label = Label(frame, text='')
-            self.rgb_label.pack(side=LEFT)
+            # self.rgb_label = Label(frame, text='')
+            # self.rgb_label.pack(side=LEFT)
 
             # for color in self.picker_colors:
             #     self.create_picker()
