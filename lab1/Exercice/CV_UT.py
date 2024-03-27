@@ -131,9 +131,10 @@ class ColorPicker:
                     masks.append(cv2.inRange(im_hsv, intervals[0], intervals[1]))
                     colors.append(intervals[0])
                     intervals = []
-            for i in range(len(masks)):
-                im_hsv[masks[i] > 0] = colors[len(masks)-i-1]
-            self.image = im_hsv
+            size = len(masks)
+            for i in range(size):
+                im_hsv[masks[i] > 0] = colors[i]
+            self.image = cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR)
             self.update_image()
             
     def create_picker_callback(self, value):
