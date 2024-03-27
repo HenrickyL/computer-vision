@@ -83,14 +83,18 @@ class ColorPicker:
         self.dragging_picker = None
 
     def on_motion(self, event):
+        self.clear_image()
         if self.dragging_picker:
             self.dragging_picker['position'] = (event.x, event.y)
         for picker in self.pickers:
             self.get_color(picker)
         self.update_image()
-
-    def update_image(self):
+        
+    def clear_image(self, value = None):
         self.load_image()
+        self.update_image()
+        
+    def update_image(self):
         self.draw_pickers()
         self.display_image()
 
@@ -100,10 +104,42 @@ class ColorPicker:
         self.label.configure(image=imgtk)
         self.label.image = imgtk
     
-    def resize_image(self, width, height):
-        self.image = cv2.resize(self.image, (width, height), interpolation = cv2.INTER_AREA) 
+    def resize_image(self, value):
+        self.clear_image()
+        new_width = int(self.image.shape[1] * value)
+        new_height = int(self.image.shape[0] * value)
+        dim = (new_width, new_height)
+        self.image = cv2.resize(self.image, dim, interpolation = cv2.INTER_AREA) 
         self.update_image()
         
+    def change_color_callback(self, value):
+        self.clear_image()
+        size = len(self.pickers)
+        if  size%2 == 0 and size > 0 :
+            first_interval = ()
+            second_interval = ()
+            # im_r,im_g,im_b = cv2.split(self.image)
+            im_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
+            
+            for i in range(len(self.pickers)):
+                x,y = self.pickers[i]['position']
+                color = im_hsv[y, x]
+                print(color)
+                if( i %2 ==0):
+                    first_interval = (*first_interval, np.array(color))
+                else:
+                    second_interval = (*second_interval, np.array(color))
+            if(len(first_interval)>2):
+                first_mask = cv2.inRange(self.image, first_interval[0], first_interval[1])
+                second_mask = cv2.inRange(self.image, second_interval[0], second_interval[1])
+            else:
+                first_mask = cv2.inRange(self.image, first_interval[0], first_interval[0])
+                second_mask = cv2.inRange(self.image, second_interval[0], second_interval[0])
+            im_hsv[first_mask > 0] =first_interval[0]
+            im_hsv[second_mask > 0] = second_interval[0]
+            self.image = im_hsv
+            self.update_image()
+            
     def create_picker_callback(self, value):
         try:
             self.create_picker()
@@ -131,10 +167,13 @@ class ColorPicker:
 
             # self.create_picker_labels()
             self.update_image()
+            # self.resize_image(0.5)
 
             self.label.bind("<ButtonPress-1>", self.on_click)
             self.label.bind("<ButtonRelease-1>", self.on_release)
             self.label.bind("<B1-Motion>", self.on_motion)
             self.root.bind("<space>", self.create_picker_callback)
+            self.root.bind("<c>", self.change_color_callback)
+            self.root.bind("<r>", self.clear_image)
 
             self.root.mainloop()
