@@ -9,6 +9,7 @@ class ColorPicker:
         self.image = None
         self.color_image = None
         self.rgb_label = None
+        self.root = None
         self.pick_size = 8
         self.pickers = []  # Lista de pickers, cada um com posição e cor própria
         self.dragging_picker = None
@@ -36,10 +37,10 @@ class ColorPicker:
             'color_label': None,
             'frame': None
         }
-        picker['rgb_label'] = Label(self.frame, text='')
-        picker['rgb_label'].pack(side=LEFT)
-        picker['frame'] = Frame(picker['rgb_label'])
-        picker['frame'].pack(fill=X, pady=2)
+        picker['frame'] = Frame(self.root, bd=5)#Frame(picker['rgb_label'])
+        picker['frame'].pack(fill=X, pady=1)
+        picker['rgb_label'] = Label(picker['frame'], text='')
+        picker['rgb_label'].pack(side=RIGHT)
         picker['color_label'] = Label(picker['frame'], image=None)
         picker['color_label'].pack(side=LEFT)
         self.pickers.append(picker)
@@ -84,9 +85,9 @@ class ColorPicker:
     def on_motion(self, event):
         if self.dragging_picker:
             self.dragging_picker['position'] = (event.x, event.y)
-            for picker in self.pickers:
-                self.get_color(picker)
-            self.update_image()
+        for picker in self.pickers:
+            self.get_color(picker)
+        self.update_image()
 
     def update_image(self):
         self.load_image()
@@ -101,6 +102,7 @@ class ColorPicker:
     
     def resize_image(self, width, height):
         self.image = cv2.resize(self.image, (width, height), interpolation = cv2.INTER_AREA) 
+        self.update_image()
         
     def create_picker_callback(self, value):
         try:
@@ -111,12 +113,12 @@ class ColorPicker:
     def start(self):
         self.load_image()
         if self.image is not None:
-            root = Tk(screenName='ColorPicker')
-            self.frame = Frame(root, bd=5)
-            self.frame.pack(side=BOTTOM)
+            self.root = Tk(screenName='ColorPicker')
+            self.frame = Frame(self.root, bd=5)
+            self.frame.pack(side=LEFT)
 
             self.label = Label(self.frame, image=None)
-            self.label.pack(side=BOTTOM)
+            self.label.pack(side=LEFT)
 
             # self.color_label = Label(frame, image=None)
             # self.color_label.pack(side=LEFT)
@@ -133,6 +135,6 @@ class ColorPicker:
             self.label.bind("<ButtonPress-1>", self.on_click)
             self.label.bind("<ButtonRelease-1>", self.on_release)
             self.label.bind("<B1-Motion>", self.on_motion)
-            root.bind("<space>", self.create_picker_callback)
+            self.root.bind("<space>", self.create_picker_callback)
 
-            root.mainloop()
+            self.root.mainloop()
