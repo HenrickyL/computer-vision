@@ -14,7 +14,8 @@ class ColorPicker:
         self.pickers = []  # Lista de pickers, cada um com posição e cor própria
         self.dragging_picker = None
         self.offset = 0
-
+        self.count = 0
+        
     def load_image(self):
         try:
             image = cv2.imread(self.image_path)
@@ -112,6 +113,25 @@ class ColorPicker:
         self.image = cv2.resize(self.image, dim, interpolation = cv2.INTER_AREA) 
         self.update_image()
         
+    def draw_img(self, img):
+        cv2.imshow(f'img_{self.count}',img)
+        self.count +=1
+        
+    def show_img(self):
+        self.count=0
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        
+    def calculate_threshold_value(self, color):
+        # Converter a cor do picker para o espaço de cores HSV
+        color_hsv = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_RGB2HSV)[0][0]
+        # Obter o componente de valor (V) da cor HSV
+        v_value = color_hsv[2]
+        # Definir um fator para ajustar o valor de thresholding
+        threshold_factor = 0.8  # Ajuste conforme necessário
+        # Calcular o valor de threshold com base no componente de valor (V)
+        threshold_value = v_value * threshold_factor
+        return threshold_value        
     def change_color_callback(self, value):
         self.clear_image()
         size = len(self.pickers)
