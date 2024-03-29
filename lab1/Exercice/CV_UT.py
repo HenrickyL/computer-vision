@@ -11,7 +11,10 @@ class ColorPicker:
         self.rgb_label = None
         self.root = None
         self.pick_size = 8
-        self.pickers = []  # Lista de pickers, cada um com posição e cor própria
+        self.pickers = []
+        self.pickersGroup1 = []
+        self.pickersGroup2 = []
+        self.onGroup1 = True
         self.dragging_picker = None
         self.offset = 0
         self.count = 0
@@ -45,6 +48,11 @@ class ColorPicker:
         picker['color_label'] = Label(picker['frame'], image=None)
         picker['color_label'].pack(side=LEFT)
         self.pickers.append(picker)
+        if(self.onGroup1):
+            self.pickersGroup1.append(picker)
+        else:
+            self.pickersGroup2.append(picker)
+        self.onGroup1 = not self.onGroup1
 
     def draw_pickers(self):
         for picker in self.pickers:
@@ -131,30 +139,79 @@ class ColorPicker:
         threshold_factor = 0.8  # Ajuste conforme necessário
         # Calcular o valor de threshold com base no componente de valor (V)
         threshold_value = v_value * threshold_factor
-        return threshold_value        
+        return threshold_value
+    
+    def colorVary(self, color, value):
+        int8ToInt = lambda c: np.array((c[0], c[1], c[2]), dtype=np.int16)
+        c = int8ToInt(color)
+        top = c + 10
+        bot = c - 10
+        top[top>255] = 255
+        top[top<0] = 0
+        bot[bot>255] = 255
+        bot[bot<0] = 0
+        return top, bot
+    
+    def getGroup(self, img, pickerGroup):
+        group = []
+        im_r, im_g, im_b = cv2.split(img)
+        for picker in pickerGroup:
+            x,y = picker['position']
+            color = img[y, x]
+            
+            # Calcula a média dos valores R, G e B
+            avg_color = np.mean(color)
+            
+            # Determina qual componente tem o valor mais próximo da média
+            diff = np.abs(color - avg_color)
+            component_index = np.argmin(diff)
+            
+            # Escolhe o componente de cor correspondente
+            if component_index == 0:
+                component = im_r
+                print('red')
+            elif component_index == 1:
+                component = im_g
+                print('green')
+            else:
+                component = im_b
+                print('blue')
+            
+            # Aplica o thresholding no componente escolhido
+            ret, mask = cv2.threshold(component, self.calculate_threshold_value(color), 255, cv2.THRESH_BINARY)
+            region = cv2.bitwise_and(component, mask)
+            # value = self.calculate_threshold_value(color)
+            # ret, mask = cv2.threshold(img, value, 255, cv2.THRESH_BINARY)
+            # top,bot = self.colorVary(color, 10)
+            # mask = cv2.inRange(img, top, bot)
+            group.append({
+                'color': color,
+                'mask': mask,
+                'region': region,
+            })
+        return group
+    
     def change_color_callback(self, value):
         self.clear_image()
         size = len(self.pickers)
         if  size%2 == 0 and size > 0 :
             # im_r,im_g,im_b = cv2.split(self.image)
-            im_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
-            intervals = []
-            masks = []
-            colors = []
-            count = 0
-            for i in range(len(self.pickers)):
-                x,y = self.pickers[i]['position']
-                color = im_hsv[y, x]
-                interval = None
-                intervals.append(np.array(color))
-                if(len(intervals) == 2):
-                    masks.append(cv2.inRange(im_hsv, intervals[0], intervals[1]))
-                    colors.append(intervals[0])
-                    intervals = []
-            size = len(masks)
+            im_hsv = self.image#cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
+            group1 = self.getGroup(im_hsv, self.pickersGroup1)
+            group2 = self.getGroup(im_hsv, self.pickersGroup2)
+            
+            size = len(group1)
             for i in range(size):
-                im_hsv[masks[i] > 0] = colors[i]
-            self.image = cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR)
+                g1 = group1[i]
+                g2 = group2[i]
+                self.draw_img(g1['mask'])
+                self.draw_img(g2['mask'])
+                self.show_img()
+                
+                im_hsv[g1['mask'] > 0] = g2['color']
+                im_hsv[g2['mask'] > 0] = g1['color']
+
+            self.image = im_hsv#cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR)
             self.update_image()
             
     def create_picker_callback(self, value):
