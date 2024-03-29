@@ -7,6 +7,7 @@ class ColorPicker:
     def __init__(self, image_path):
         self.image_path = image_path
         self.image = None
+        self.image_aux = None
         self.color_image = None
         self.rgb_label = None
         self.root = None
@@ -131,14 +132,22 @@ class ColorPicker:
         cv2.destroyAllWindows()
         
     def calculate_threshold_value(self, color):
-        # Converter a cor do picker para o espaço de cores HSV
-        color_hsv = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_RGB2HSV)[0][0]
-        # Obter o componente de valor (V) da cor HSV
-        v_value = color_hsv[2]
+        # # Converter a cor do picker para o espaço de cores HSV
+        # color_hsv = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_RGB2HSV)[0][0]
+        # # Obter o componente de valor (V) da cor HSV
+        # v_value = color_hsv[2] #hue #saturation #value
+        # # Definir um fator para ajustar o valor de thresholding
+        # threshold_factor = 0.8  # Ajuste conforme necessário
+        # # Calcular o valor de threshold com base no componente de valor (V)
+        # threshold_value = v_value * threshold_factor
+        # return threshold_value
+        
+        #Calcular a média dos valores R, G e B
+        avg_color = np.mean(color)
         # Definir um fator para ajustar o valor de thresholding
         threshold_factor = 0.8  # Ajuste conforme necessário
-        # Calcular o valor de threshold com base no componente de valor (V)
-        threshold_value = v_value * threshold_factor
+        # Calcular o valor de threshold com base na média dos valores R, G e B
+        threshold_value = avg_color * threshold_factor
         return threshold_value
     
     def colorVary(self, color, value):
@@ -159,35 +168,40 @@ class ColorPicker:
             x,y = picker['position']
             color = img[y, x]
             
-            # Calcula a média dos valores R, G e B
-            avg_color = np.mean(color)
+            # # Calcula a média dos valores R, G e B
+            # avg_color = np.mean(color)
             
-            # Determina qual componente tem o valor mais próximo da média
-            diff = np.abs(color - avg_color)
-            component_index = np.argmin(diff)
+            # # Determina qual componente tem o valor mais próximo da média
+            # diff = np.abs(color - avg_color)
+            # component_index = np.argmin(diff)
             
-            # Escolhe o componente de cor correspondente
-            if component_index == 0:
-                component = im_r
-                print('red')
-            elif component_index == 1:
-                component = im_g
-                print('green')
-            else:
-                component = im_b
-                print('blue')
+            # # Escolhe o componente de cor correspondente
+            # if component_index == 2:
+            #     component = im_r
+            #     print('red')
+            # elif component_index == 1:
+            #     component = im_g
+            #     print('green')
+            # else:
+            #     component = im_b
+            #     print('blue')
+            # value = self.calculate_threshold_value(color)
+            # print(value)
+            # # Aplica o thresholding no componente escolhido
+            # ret, mask = cv2.threshold(component, value, 255, cv2.THRESH_BINARY)
+            # region = cv2.bitwise_and(component, mask)
             
-            # Aplica o thresholding no componente escolhido
-            ret, mask = cv2.threshold(component, self.calculate_threshold_value(color), 255, cv2.THRESH_BINARY)
-            region = cv2.bitwise_and(component, mask)
             # value = self.calculate_threshold_value(color)
             # ret, mask = cv2.threshold(img, value, 255, cv2.THRESH_BINARY)
-            # top,bot = self.colorVary(color, 10)
-            # mask = cv2.inRange(img, top, bot)
+            # region = cv2.bitwise_and(img, mask)
+            
+            top,bot = self.colorVary(color, 30)
+            print(bot, top)
+            mask = cv2.inRange(img, bot, top)
             group.append({
                 'color': color,
                 'mask': mask,
-                'region': region,
+                # 'region': region,
             })
         return group
     
@@ -196,7 +210,7 @@ class ColorPicker:
         size = len(self.pickers)
         if  size%2 == 0 and size > 0 :
             # im_r,im_g,im_b = cv2.split(self.image)
-            im_hsv = self.image#cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
+            im_hsv = self.image#cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)#
             group1 = self.getGroup(im_hsv, self.pickersGroup1)
             group2 = self.getGroup(im_hsv, self.pickersGroup2)
             
@@ -206,12 +220,14 @@ class ColorPicker:
                 g2 = group2[i]
                 self.draw_img(g1['mask'])
                 self.draw_img(g2['mask'])
-                self.show_img()
                 
                 im_hsv[g1['mask'] > 0] = g2['color']
+                self.draw_img(im_hsv)
                 im_hsv[g2['mask'] > 0] = g1['color']
+                self.draw_img(im_hsv)
+                self.show_img()
 
-            self.image = im_hsv#cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR)
+            self.image = im_hsv#cv2.cvtColor(im_hsv, cv2.COLOR_RGB2BGR)#
             self.update_image()
             
     def create_picker_callback(self, value):
@@ -220,6 +236,12 @@ class ColorPicker:
             self.update_image()
         except IndexError:
             print('limits')
+            
+    def delete_picker_callback(self, value):
+            self.pickers= self.pickers[:-1]
+            self.clear_image()
+            self.update_image()
+
     def start(self):
         self.load_image()
         if self.image is not None:
@@ -247,6 +269,7 @@ class ColorPicker:
             self.label.bind("<ButtonRelease-1>", self.on_release)
             self.label.bind("<B1-Motion>", self.on_motion)
             self.root.bind("<space>", self.create_picker_callback)
+            self.root.bind("<x>", self.delete_picker_callback)
             self.root.bind("<c>", self.change_color_callback)
             self.root.bind("<r>", self.clear_image)
 
