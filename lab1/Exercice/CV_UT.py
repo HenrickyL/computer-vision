@@ -54,15 +54,18 @@ class ColorPicker:
         else:
             self.pickersGroup2.append(picker)
         self.onGroup1 = not self.onGroup1
-
+    def draw_picker(self, picker, isGroup1 = True):
+        color = self.image[picker['position'][1], picker['position'][0]]
+        border = (0,255,255) if isGroup1 else (255,0,255)
+        color_bgr = tuple(int(c) for c in color)
+        cv2.circle(self.image, picker['position'], self.pick_size, color_bgr, -1)
+        cv2.circle(self.image, picker['position'], self.pick_size+1, border, 2)
+        cv2.circle(self.image, picker['position'], self.pick_size-1, (0,0,0), 2)
     def draw_pickers(self):
-        for picker in self.pickers:
-            color = self.image[picker['position'][1], picker['position'][0]]
-            color_bgr = tuple(int(c) for c in color)
-            cv2.circle(self.image, picker['position'], self.pick_size, color_bgr, -1)
-            cv2.circle(self.image, picker['position'], self.pick_size+1, (255,255,255), 2)
-            cv2.circle(self.image, picker['position'], self.pick_size-1, (0,0,0), 2)
-            # cv2.circle(self.image, picker['position'], self.pick_size, picker['color'], 2)
+        for picker in self.pickersGroup1:
+            self.draw_picker(picker, True)
+        for picker in self.pickersGroup2:
+            self.draw_picker(picker, False)
             
 
     def get_color(self, picker):
@@ -133,23 +136,23 @@ class ColorPicker:
         cv2.destroyAllWindows()
         
     def calculate_threshold_value(self, color):
-        # # Converter a cor do picker para o espaço de cores HSV
-        # color_hsv = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_RGB2HSV)[0][0]
-        # # Obter o componente de valor (V) da cor HSV
-        # v_value = color_hsv[2] #hue #saturation #value
-        # # Definir um fator para ajustar o valor de thresholding
-        # threshold_factor = 0.8  # Ajuste conforme necessário
-        # # Calcular o valor de threshold com base no componente de valor (V)
-        # threshold_value = v_value * threshold_factor
-        # return threshold_value
-        
-        #Calcular a média dos valores R, G e B
-        avg_color = np.mean(color)
+        # Converter a cor do picker para o espaço de cores HSV
+        color_hsv = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_RGB2HSV)[0][0]
+        # Obter o componente de valor (V) da cor HSV
+        v_value = color_hsv[2] #hue #saturation #value
         # Definir um fator para ajustar o valor de thresholding
         threshold_factor = 0.8  # Ajuste conforme necessário
-        # Calcular o valor de threshold com base na média dos valores R, G e B
-        threshold_value = avg_color * threshold_factor
+        # Calcular o valor de threshold com base no componente de valor (V)
+        threshold_value = v_value * threshold_factor
         return threshold_value
+        
+        # #Calcular a média dos valores R, G e B
+        # avg_color = np.mean(color)
+        # # Definir um fator para ajustar o valor de thresholding
+        # threshold_factor = 0.8  # Ajuste conforme necessário
+        # # Calcular o valor de threshold com base na média dos valores R, G e B
+        # threshold_value = avg_color * threshold_factor
+        # return threshold_value
     
     def colorVary(self, color, value):
         int8ToInt = lambda c: np.array((c[0], c[1], c[2]), dtype=np.int16)
@@ -196,7 +199,8 @@ class ColorPicker:
             # ret, mask = cv2.threshold(img, value, 255, cv2.THRESH_BINARY)
             # region = cv2.bitwise_and(img, mask)
             # print(component)
-            top,bot = self.colorVary(color, 50)
+            
+            top,bot = self.colorVary(color, 5)
             print(f'bot:{bot} - top: {top}')
             mask = cv2.inRange(img, bot, top)
             group.append({
@@ -206,10 +210,13 @@ class ColorPicker:
                 # 'region': region,
             })
         return group
-    
+    def getMaskInterval(self, img, color1, color2):
+        return cv2.inRange(img, color1, color2)
     
     def GBR2RGB(self, c):
         return np.array((c[2], c[1], c[0]))
+    def cvt(self, c):
+        return (int(c[0]), int(c[1]), int(c[2]))
     def change_color_callback(self, value):
         self.clear_image()
         size = len(self.pickers)
@@ -217,32 +224,43 @@ class ColorPicker:
             # im_r,im_g,im_b = cv2.split(self.image)
             im_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
             im_rgb = cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR)
+            im_bk = im_rgb.copy()
             
             group1 = self.getGroup(im_hsv, self.pickersGroup1)
             group2 = self.getGroup(im_hsv, self.pickersGroup2)
             
             size = len(group1)
-            for i in range(size):
+            for i in range(size): #-1
                 g1 = group1[i]
-                g2 = group2[i]
-                mask1 = g1['mask']
-                mask2 = g2['mask']
-                self.draw_img(mask1)
-                self.draw_img(mask2)
                 x, y = g1['position']
-                colorG1 = im_rgb[y,x]
+                colorG1 = im_bk[y,x]
+                
+                g2 = group2[i]
                 x, y = g2['position']
-                colorG2 = im_rgb[y,x]
-                print('c',colorG1, colorG2)
-                print('c_i',self.GBR2RGB(colorG1), self.GBR2RGB(colorG2))
+                colorG2 = im_bk[y,x]
+                
+                # g1_next = group1[i+1]
+                # g2_next = group2[i+1]
+                
+                # x, y = g1_next['position']
+                # colorG1_next = im_rgb[y,x]
+                # x, y = g2_next['position']
+                # colorG2_next = im_rgb[y,x]
+                
+                # print(colorG1, colorG1_next)
+                # print(colorG2, colorG2_next)
+                
+                # mask1 = self.getMaskInterval(im_hsv, colorG1, colorG1_next)
+                # mask2 = self.getMaskInterval(im_hsv, colorG2, colorG2_next)
+                mask1 = g1['mask']
+                self.draw_img(mask1)
+                im_rgb[mask1 > 0] = colorG2
+                
+                mask2 = g2['mask']
+                self.draw_img(mask2)
+                im_rgb[mask2 > 0] = colorG1
                 self.show_img()
                 
-                self.draw_img(im_rgb)
-                im_rgb[mask1 > 0] = colorG2
-                self.draw_img(im_rgb)
-                im_rgb[mask2 > 0] = colorG1
-                self.draw_img(im_rgb)
-                self.show_img()
 
             self.image = im_rgb#cv2.cvtColor(im_rgb, cv2.COLOR_RGB2BGR)#
             self.update_image()
@@ -255,6 +273,7 @@ class ColorPicker:
             print('limits')
             
     def delete_picker_callback(self, value):
+            self.onGroup1 = len(self.pickers) %2 ==0
             self.pickers= self.pickers[:-1]
             self.pickersGroup1 = []
             self.pickersGroup2 = []
