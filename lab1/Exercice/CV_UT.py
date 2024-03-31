@@ -136,23 +136,23 @@ class ColorPicker:
         cv2.destroyAllWindows()
         
     def calculate_threshold_value(self, color):
-        # Converter a cor do picker para o espaço de cores HSV
-        color_hsv = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_RGB2HSV)[0][0]
-        # Obter o componente de valor (V) da cor HSV
-        v_value = color_hsv[2] #hue #saturation #value
-        # Definir um fator para ajustar o valor de thresholding
-        threshold_factor = 0.8  # Ajuste conforme necessário
-        # Calcular o valor de threshold com base no componente de valor (V)
-        threshold_value = v_value * threshold_factor
-        return threshold_value
-        
-        # #Calcular a média dos valores R, G e B
-        # avg_color = np.mean(color)
+        # # Converter a cor do picker para o espaço de cores HSV
+        # color_hsv = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_RGB2HSV)[0][0]
+        # # Obter o componente de valor (V) da cor HSV
+        # v_value = color_hsv[2] #hue #saturation #value
         # # Definir um fator para ajustar o valor de thresholding
         # threshold_factor = 0.8  # Ajuste conforme necessário
-        # # Calcular o valor de threshold com base na média dos valores R, G e B
-        # threshold_value = avg_color * threshold_factor
+        # # Calcular o valor de threshold com base no componente de valor (V)
+        # threshold_value = v_value * threshold_factor
         # return threshold_value
+        
+        #Calcular a média dos valores R, G e B
+        avg_color = np.mean(color)
+        # Definir um fator para ajustar o valor de thresholding
+        threshold_factor = 0.8  # Ajuste conforme necessário
+        # Calcular o valor de threshold com base na média dos valores R, G e B
+        threshold_value = avg_color * threshold_factor
+        return threshold_value
     
     def colorVary(self, color, value):
         int8ToInt = lambda c: np.array((c[0], c[1], c[2]), dtype=np.int16)
@@ -193,7 +193,11 @@ class ColorPicker:
             # print(value)
             # # Aplica o thresholding no componente escolhido
             # ret, mask = cv2.threshold(component, value, 255, cv2.THRESH_BINARY)
+            # self.draw_img(mask)
             # region = cv2.bitwise_and(component, mask)
+            # self.draw_img(region)
+            # self.show_img()
+            
             
             # value = self.calculate_threshold_value(color)
             # ret, mask = cv2.threshold(img, value, 255, cv2.THRESH_BINARY)
@@ -201,7 +205,6 @@ class ColorPicker:
             # print(component)
             
             top,bot = self.colorVary(color, 5)
-            print(f'bot:{bot} - top: {top}')
             mask = cv2.inRange(img, bot, top)
             group.append({
                 'picker': picker,
@@ -232,10 +235,10 @@ class ColorPicker:
             size = len(group1)
             for i in range(size): #-1
                 g1 = group1[i]
+                g2 = group2[i]
+                
                 x, y = g1['position']
                 colorG1 = im_bk[y,x]
-                
-                g2 = group2[i]
                 x, y = g2['position']
                 colorG2 = im_bk[y,x]
                 
@@ -243,21 +246,19 @@ class ColorPicker:
                 # g2_next = group2[i+1]
                 
                 # x, y = g1_next['position']
-                # colorG1_next = im_rgb[y,x]
+                # colorG1_next = im_bk[y,x]
                 # x, y = g2_next['position']
-                # colorG2_next = im_rgb[y,x]
-                
-                # print(colorG1, colorG1_next)
-                # print(colorG2, colorG2_next)
+                # colorG2_next = im_bk[y,x]
                 
                 # mask1 = self.getMaskInterval(im_hsv, colorG1, colorG1_next)
                 # mask2 = self.getMaskInterval(im_hsv, colorG2, colorG2_next)
                 mask1 = g1['mask']
-                self.draw_img(mask1)
-                im_rgb[mask1 > 0] = colorG2
-                
                 mask2 = g2['mask']
+                
+                self.draw_img(mask1)
                 self.draw_img(mask2)
+                
+                im_rgb[mask1 > 0] = colorG2
                 im_rgb[mask2 > 0] = colorG1
                 self.show_img()
                 
