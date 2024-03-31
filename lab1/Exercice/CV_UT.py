@@ -100,10 +100,11 @@ class ColorPicker:
             self.get_color(picker)
         self.update_image()
         
-    def clear_image(self, value = None):
+    def clear_image(self):
         self.load_image()
+    def clear_update_image(self, value = None):
+        self.clear_image()
         self.update_image()
-        
     def update_image(self):
         self.draw_pickers()
         self.display_image()
@@ -174,7 +175,7 @@ class ColorPicker:
             # # Determina qual componente tem o valor mais próximo da média
             # diff = np.abs(color - avg_color)
             # component_index = np.argmin(diff)
-            
+            # component = img
             # # Escolhe o componente de cor correspondente
             # if component_index == 2:
             #     component = im_r
@@ -194,23 +195,29 @@ class ColorPicker:
             # value = self.calculate_threshold_value(color)
             # ret, mask = cv2.threshold(img, value, 255, cv2.THRESH_BINARY)
             # region = cv2.bitwise_and(img, mask)
-            
-            top,bot = self.colorVary(color, 30)
-            print(bot, top)
+            # print(component)
+            top,bot = self.colorVary(color, 50)
+            print(f'bot:{bot} - top: {top}')
             mask = cv2.inRange(img, bot, top)
             group.append({
-                'color': color,
+                'picker': picker,
+                'position': (x,y),
                 'mask': mask,
                 # 'region': region,
             })
         return group
     
+    
+    def GBR2RGB(self, c):
+        return np.array((c[2], c[1], c[0]))
     def change_color_callback(self, value):
         self.clear_image()
         size = len(self.pickers)
         if  size%2 == 0 and size > 0 :
             # im_r,im_g,im_b = cv2.split(self.image)
-            im_hsv = self.image#cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)#
+            im_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
+            im_rgb = cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR)
+            
             group1 = self.getGroup(im_hsv, self.pickersGroup1)
             group2 = self.getGroup(im_hsv, self.pickersGroup2)
             
@@ -218,16 +225,26 @@ class ColorPicker:
             for i in range(size):
                 g1 = group1[i]
                 g2 = group2[i]
-                self.draw_img(g1['mask'])
-                self.draw_img(g2['mask'])
+                mask1 = g1['mask']
+                mask2 = g2['mask']
+                self.draw_img(mask1)
+                self.draw_img(mask2)
+                x, y = g1['position']
+                colorG1 = im_rgb[y,x]
+                x, y = g2['position']
+                colorG2 = im_rgb[y,x]
+                print('c',colorG1, colorG2)
+                print('c_i',self.GBR2RGB(colorG1), self.GBR2RGB(colorG2))
+                self.show_img()
                 
-                im_hsv[g1['mask'] > 0] = g2['color']
-                self.draw_img(im_hsv)
-                im_hsv[g2['mask'] > 0] = g1['color']
-                self.draw_img(im_hsv)
+                self.draw_img(im_rgb)
+                im_rgb[mask1 > 0] = colorG2
+                self.draw_img(im_rgb)
+                im_rgb[mask2 > 0] = colorG1
+                self.draw_img(im_rgb)
                 self.show_img()
 
-            self.image = im_hsv#cv2.cvtColor(im_hsv, cv2.COLOR_RGB2BGR)#
+            self.image = im_rgb#cv2.cvtColor(im_rgb, cv2.COLOR_RGB2BGR)#
             self.update_image()
             
     def create_picker_callback(self, value):
@@ -239,6 +256,13 @@ class ColorPicker:
             
     def delete_picker_callback(self, value):
             self.pickers= self.pickers[:-1]
+            self.pickersGroup1 = []
+            self.pickersGroup2 = []
+            for i in range(len(self.pickers)):
+                if(i%2 == 0):
+                    self.pickersGroup1.append(self.pickers[i])
+                else:
+                    self.pickersGroup2.append(self.pickers[i])
             self.clear_image()
             self.update_image()
 
@@ -271,6 +295,6 @@ class ColorPicker:
             self.root.bind("<space>", self.create_picker_callback)
             self.root.bind("<x>", self.delete_picker_callback)
             self.root.bind("<c>", self.change_color_callback)
-            self.root.bind("<r>", self.clear_image)
+            self.root.bind("<r>", self.clear_update_image)
 
             self.root.mainloop()
