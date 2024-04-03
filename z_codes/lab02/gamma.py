@@ -17,7 +17,7 @@ def gamma_correction_LUT(img, gamma,c=1.0):
 	GAMMA_LUT = np.array([c*((i / 255.0) ** (1.0 / gamma)) * 255
 		for i in np.arange(0, 256)]).astype("uint8")
  
-	# aplica a transformação usando LUT
+	# aplica a transformação usando LUT 
 	return cv2.LUT(img, GAMMA_LUT)
 
 
